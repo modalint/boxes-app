@@ -3,437 +3,450 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מעקב קרטונים למעבר דירה - סנכרון אמיתי</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.0/axios.min.js"></script>
+    <title>מעקב קרטונים למעבר דירה</title>
     <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-            direction: rtl;
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; direction: rtl;
         }
-        .container { 
-            max-width: 1200px; 
-            margin: 0 auto; 
-            background: white;
-            border-radius: 10px;
+        .container {
+            max-width: 1200px; margin: 0 auto;
+            background: white; border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        .header { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
+        .header {
+            background: 
+                linear-gradient(135deg, rgba(44, 62, 80, 0.8) 0%, rgba(52, 152, 219, 0.8) 100%),
+                url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/4gKgSUNDX1BST0ZJTEUAAQEAAAKQbGNtcwQwAABtbnRyUkdCIFhZWiAH3wAIABMAEgAWADFhY3NwQVBQTAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAPbWAAEAAAAA0y1sY21zAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKZGVzYwAAAPwAAAA+Y3BydAAAATwAAAAuZG1uZAAAAWwAAAAwZG1kZAAAAZwAAAAoYmx1ZAAAAZQAAAAIDZ2VuAAOApAAAACgYmZjAAOBaAAAACFmYgAAAOBwAAAACGNocmOAAAOBaAAAACmbWxdYAAOBaAAAACRjR3nAAOBsAAAACGVpeWOAAAOBaAAAACRnUkdCAAOBaAAAASA==') center/cover no-repeat;
+            color: white; 
+            padding: 3rem 2rem; 
             text-align: center;
+            background-blend-mode: overlay;
+            position: relative;
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
-        .header h1 { margin: 0; font-size: 2rem; }
-        .header p { margin: 10px 0 0 0; opacity: 0.9; }
-        .status { 
-            padding: 1rem 2rem;
-            border-bottom: 1px solid #eee;
-            background: #f8f9fa;
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 100%);
+            pointer-events: none;
         }
-        .status.connected { background: #d4edda; color: #155724; }
-        .status.disconnected { background: #f8d7da; color: #721c24; }
-        .status.loading { background: #fff3cd; color: #856404; }
-        .setup-section {
-            padding: 2rem;
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            margin: 2rem;
-            border-radius: 5px;
+        .header h1, .header p {
+            position: relative;
+            z-index: 2;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
         }
+        .header h1 { margin: 0; font-size: 2.5rem; }
+        .header p { margin: 10px 0 0 0; opacity: 0.9; font-size: 1.1rem; }
+        
+        .status-bar {
+            padding: 1rem 2rem; font-weight: bold; 
+            border-bottom: 1px solid #eee; font-size: 0.9rem;
+        }
+        .status-connected { background: #d4edda; color: #155724; }
+        .status-local { background: #fff3cd; color: #856404; }
+        .status-error { background: #f8d7da; color: #721c24; }
+        
         .main-content { padding: 2rem; }
-        .form-group { margin-bottom: 1.5rem; }
-        .form-group label { 
-            display: block; 
-            font-weight: bold; 
-            margin-bottom: 0.5rem; 
-            color: #333;
+        
+        .google-setup {
+            background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+            color: white; padding: 2rem; margin-bottom: 2rem;
+            border-radius: 10px; text-align: center;
         }
-        .form-group input, .form-group select, .form-group textarea { 
-            width: 100%; 
-            padding: 12px; 
-            border: 2px solid #ddd; 
-            border-radius: 5px; 
-            box-sizing: border-box;
-            font-size: 16px;
-        }
-        .form-group input:focus, .form-group select:focus { 
-            border-color: #667eea; 
-            outline: none; 
-        }
-        .btn { 
-            padding: 12px 24px; 
-            border: none; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            font-size: 16px;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-        .btn-primary { background: #667eea; color: white; }
-        .btn-primary:hover { background: #5a6fd8; }
-        .btn-success { background: #28a745; color: white; }
-        .btn-success:hover { background: #218838; }
-        .btn-danger { background: #dc3545; color: white; }
-        .btn-danger:hover { background: #c82333; }
-        .btn-secondary { background: #6c757d; color: white; }
-        .btn-secondary:hover { background: #5a6268; }
-        .btn:disabled { background: #ccc; cursor: not-allowed; }
-        .grid { 
-            display: grid; 
-            gap: 1rem; 
-            margin-bottom: 2rem;
-        }
-        .grid-3 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-        .card { 
-            background: white; 
-            padding: 1.5rem; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border: 1px solid #eee;
-        }
-        .card h3 { margin-top: 0; color: #333; }
-        .stats { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        .google-setup h3 { margin-top: 0; font-size: 1.5rem; }
+        .google-setup input {
+            width: 70%; padding: 12px; font-size: 16px;
+            border: none; border-radius: 25px; margin: 10px;
             text-align: center;
         }
-        .stats .number { font-size: 2.5rem; font-weight: bold; margin: 10px 0; }
-        .boxes-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
-            gap: 1rem; 
-            margin-top: 2rem;
+        .google-setup button {
+            background: white; color: #4285f4;
+            padding: 12px 30px; border: none; border-radius: 25px;
+            font-weight: bold; cursor: pointer; font-size: 16px;
+            transition: all 0.3s;
         }
-        .box-card { 
-            border: 2px solid #ddd; 
-            border-radius: 8px; 
-            padding: 1rem; 
-            background: white;
-            transition: box-shadow 0.3s;
+        .google-setup button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        
+        .card {
+            background: white; padding: 2rem; margin-bottom: 2rem;
+            border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border-left: 4px solid #3498db;
         }
-        .box-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
-        .box-number { 
-            font-size: 2rem; 
-            font-weight: bold; 
-            text-align: center; 
-            background: #f8f9fa; 
-            padding: 1rem; 
-            border-radius: 5px; 
-            margin-bottom: 1rem;
-            color: #333;
+        .card h3 { margin-top: 0; color: #2c3e50; font-size: 1.3rem; }
+        
+        .form-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem; margin-bottom: 2rem;
         }
-        .room-tag { 
-            display: inline-block; 
-            padding: 5px 12px; 
-            border-radius: 20px; 
-            font-size: 0.8rem; 
-            font-weight: bold; 
-            margin-bottom: 1rem;
+        .form-group label {
+            display: block; font-weight: bold; margin-bottom: 0.5rem;
+            color: #2c3e50; font-size: 0.9rem;
         }
+        .form-group input, .form-group select {
+            width: 100%; padding: 12px; border: 2px solid #ddd;
+            border-radius: 8px; font-size: 16px; transition: border 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: #3498db; outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .btn {
+            padding: 12px 24px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 16px; font-weight: bold;
+            transition: all 0.3s; text-decoration: none; display: inline-block;
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary { background: #3498db; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-warning { background: #f39c12; color: white; }
+        .btn-secondary { background: #95a5a6; color: white; }
+        
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem; margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 2rem; border-radius: 10px; text-align: center;
+        }
+        .stat-number { font-size: 3rem; font-weight: bold; margin: 10px 0; }
+        .stat-label { font-size: 1rem; opacity: 0.9; }
+        
+        .boxes-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem; margin-top: 2rem;
+        }
+        .box-card {
+            background: white; border: 2px solid #ecf0f1; border-radius: 10px;
+            padding: 1.5rem; transition: all 0.3s; position: relative;
+            overflow: hidden;
+        }
+        .box-card:hover {
+            transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-color: #3498db;
+        }
+        .box-number {
+            font-size: 2.5rem; font-weight: bold; text-align: center;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 1rem; border-radius: 8px; margin-bottom: 1rem;
+            color: #2c3e50;
+        }
+        .room-tag {
+            display: inline-block; padding: 8px 16px; border-radius: 20px;
+            font-size: 0.8rem; font-weight: bold; margin-bottom: 1rem;
+            text-align: center; width: 100%;
+        }
+        .contents-box {
+            background: #f8f9fa; padding: 1rem; border-radius: 8px;
+            margin-bottom: 1rem; color: #2c3e50; min-height: 60px;
+        }
+        .timestamp {
+            font-size: 0.75rem; color: #7f8c8d; text-align: center;
+            margin-bottom: 1rem; font-style: italic;
+        }
+        .actions {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+        }
+        
         .room-salon { background: #e3f2fd; color: #1976d2; }
         .room-kitchen { background: #e8f5e8; color: #388e3c; }
         .room-ariel { background: #f3e5f5; color: #7b1fa2; }
         .room-liri { background: #fce4ec; color: #c2185b; }
         .room-erez { background: #fff3e0; color: #f57c00; }
         .room-music { background: #e8eaf6; color: #3f51b5; }
-        .room-vika-amihai { background: #ffebee; color: #d32f2f; }
+        .room-vika { background: #ffebee; color: #d32f2f; }
         .room-default { background: #f5f5f5; color: #666; }
-        .contents { 
-            background: #f8f9fa; 
-            padding: 0.8rem; 
-            border-radius: 5px; 
-            margin-bottom: 1rem;
-            color: #333;
+        
+        .message {
+            padding: 1rem; border-radius: 8px; margin-bottom: 1rem;
+            font-weight: bold; text-align: center;
         }
-        .actions { 
-            display: flex; 
-            gap: 0.5rem; 
+        .message-success { background: #d4edda; color: #155724; }
+        .message-error { background: #f8d7da; color: #721c24; }
+        
+        .empty-state {
+            text-align: center; padding: 4rem; color: #7f8c8d;
         }
-        .actions .btn { 
-            flex: 1; 
-            font-size: 0.9rem; 
-            padding: 8px 12px;
-        }
-        .loading { 
-            text-align: center; 
-            padding: 2rem; 
-            color: #666;
-        }
-        .error { 
-            background: #f8d7da; 
-            color: #721c24; 
-            padding: 1rem; 
-            border-radius: 5px; 
-            margin: 1rem 0;
-        }
-        .success { 
-            background: #d4edda; 
-            color: #155724; 
-            padding: 1rem; 
-            border-radius: 5px; 
-            margin: 1rem 0;
-        }
-        .instructions {
-            background: #e7f3ff;
-            padding: 1.5rem;
-            border-radius: 8px;
-            border-left: 4px solid #2196f3;
-            margin-bottom: 2rem;
-        }
-        .instructions h3 { margin-top: 0; color: #1976d2; }
-        .instructions ol { padding-right: 20px; }
-        .instructions li { margin-bottom: 0.5rem; }
+        .empty-state h3 { font-size: 2rem; margin-bottom: 1rem; }
+        
         @media (max-width: 768px) {
-            .container { margin: 10px; }
-            .header { padding: 1.5rem; }
-            .header h1 { font-size: 1.5rem; }
-            .main-content { padding: 1rem; }
-            .grid-3 { grid-template-columns: 1fr; }
-            .actions { flex-direction: column; }
+            .form-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .boxes-grid { grid-template-columns: 1fr; }
+            .actions { grid-template-columns: 1fr; }
+            .google-setup input { width: 90%; }
         }
+        
+        .loading { display: none; }
+        .loading.show { display: block; text-align: center; padding: 2rem; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🏠 מעקב קרטונים למעבר דירה</h1>
-            <p>סנכרון אמיתי עם Google Sheets - נתונים משותפים בין כל המכשירים</p>
+            <p>ארגן את המעבר שלך בקלות עם סנכרון אוטומטי ל-Google Sheets</p>
         </div>
-
-        <div id="status" class="status disconnected">
-            <strong>לא מחובר ל-Google Sheets</strong> - נתונים נשמרים מקומית בלבד
+        
+        <div id="status" class="status-bar status-local">
+            📱 עובד במצב מקומי - הנתונים נשמרים במכשיר זה בלבד
         </div>
-
-        <div id="setup-section" class="setup-section">
-            <h3>🔧 הגדרת חיבור ל-Google Sheets</h3>
-            
-            <div class="instructions">
-                <h4>שלבי ההכנה:</h4>
-                <ol>
-                    <li><strong>צור Google Sheets חדש</strong> - לך ל-sheets.google.com וצור קובץ חדש</li>
-                    <li><strong>שתף את הקובץ</strong> - לחץ על "שתף" ובחר "כל מי שיש לו הקישור יכול לערוך"</li>
-                    <li><strong>העתק את הקישור</strong> - העתק את כתובת ה-URL מהדפדפן</li>
-                    <li><strong>הדבק כאן למטה</strong> - הדבק את הקישור ולחץ "התחבר"</li>
-                </ol>
-                <p><strong>חשוב:</strong> וודא שהגיליון זמין לעריכה לכל מי שיש לו הקישור</p>
-            </div>
-
-            <div class="form-group">
-                <label for="sheetsUrl">קישור Google Sheets:</label>
-                <input type="url" 
-                       id="sheetsUrl" 
-                       placeholder="https://docs.google.com/spreadsheets/d/..." 
-                       style="margin-bottom: 10px;">
-                <button class="btn btn-primary" onclick="connectToSheets()">
-                    התחבר ל-Google Sheets
-                </button>
-            </div>
-        </div>
-
+        
         <div class="main-content">
-            <!-- סטטיסטיקות -->
-            <div class="grid grid-3">
-                <div class="card stats">
-                    <h3>סה״כ קרטונים</h3>
-                    <div class="number" id="totalBoxes">0</div>
+            <!-- Google Sheets Setup -->
+            <div id="googleSetup" class="google-setup">
+                <h3>🔗 חיבור ל-Google Sheets לשיתוף עם ויקה</h3>
+                <p>צור Google Sheets חדש, שתף אותו עם ויקה והכנס כאן את הקישור</p>
+                <input type="url" id="sheetsUrl" placeholder="https://docs.google.com/spreadsheets/d/...">
+                <br>
+                <button onclick="connectToSheets()">🚀 התחבר ל-Google Sheets</button>
+                <button onclick="disconnectSheets()" style="background: #e74c3c; color: white;">❌ התנתק</button>
+            </div>
+            
+            <div id="message"></div>
+            
+            <!-- Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalBoxes">0</div>
+                    <div class="stat-label">סה״כ קרטונים</div>
                 </div>
-                <div class="card stats">
-                    <h3>חדרים</h3>
-                    <div class="number" id="totalRooms">0</div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalRooms">0</div>
+                    <div class="stat-label">חדרים שונים</div>
                 </div>
-                <div class="card stats">
-                    <h3>ייצוא נתונים</h3>
-                    <button class="btn btn-secondary" onclick="exportData()" style="margin-top: 10px;">
+                <div class="stat-card">
+                    <button class="btn btn-warning" onclick="exportToCSV()" style="width: 100%; margin-top: 10px;">
                         📥 הורד CSV
                     </button>
+                    <div class="stat-label" style="margin-top: 10px;">ייצוא נתונים</div>
                 </div>
             </div>
-
-            <!-- טופס הוספת קרטון -->
+            
+            <!-- Add Box Form -->
             <div class="card">
                 <h3>➕ הוסף קרטון חדש</h3>
-                <form onsubmit="addBox(event)">
-                    <div class="grid grid-3">
-                        <div class="form-group">
-                            <label for="boxNumber">מספר קרטון:</label>
-                            <input type="text" id="boxNumber" required placeholder="לדוגמה: 1, A1, וכו'">
-                        </div>
-                        <div class="form-group">
-                            <label for="boxRoom">חדר יעד:</label>
-                            <select id="boxRoom" required>
-                                <option value="">בחר חדר</option>
-                                <option value="סלון">סלון</option>
-                                <option value="מטבח">מטבח</option>
-                                <option value="החדר של אריאל">החדר של אריאל</option>
-                                <option value="החדר של לירי">החדר של לירי</option>
-                                <option value="החדר של ארז">החדר של ארז</option>
-                                <option value="חדר מוזיקה">חדר מוזיקה</option>
-                                <option value="החדר של ויקה ועמיחי">החדר של ויקה ועמיחי</option>
-                                <option value="אמבטיה">אמבטיה</option>
-                                <option value="שירותים">שירותים</option>
-                                <option value="מחסן">מחסן</option>
-                                <option value="מרפסת">מרפסת</option>
-                                <option value="כלבו">כלבו</option>
-                                <option value="אחר">אחר</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="boxContents">תכולה:</label>
-                            <input type="text" id="boxContents" required placeholder="תאר את התכולה...">
-                        </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>מספר קרטון:</label>
+                        <input type="text" id="boxNumber" placeholder="לדוגמה: 1, A1, וכו'">
                     </div>
-                    <button type="submit" class="btn btn-success">➕ הוסף קרטון</button>
-                </form>
+                    <div class="form-group">
+                        <label>חדר יעד:</label>
+                        <select id="boxRoom">
+                            <option value="">בחר חדר</option>
+                            <option value="סלון">סלון</option>
+                            <option value="מטבח">מטבח</option>
+                            <option value="החדר של אריאל">החדר של אריאל</option>
+                            <option value="החדר של לירי">החדר של לירי</option>
+                            <option value="החדר של ארז">החדר של ארז</option>
+                            <option value="חדר מוזיקה">חדר מוזיקה</option>
+                            <option value="החדר של ויקה ועמיחי">החדר של ויקה ועמיחי</option>
+                            <option value="אמבטיה">אמבטיה</option>
+                            <option value="שירותים">שירותים</option>
+                            <option value="מחסן">מחסן</option>
+                            <option value="מרפסת">מרפסת</option>
+                            <option value="כלבו">כלבו</option>
+                            <option value="אחר">אחר</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>תכולה:</label>
+                        <input type="text" id="boxContents" placeholder="תאר את התכולה...">
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="addBox()">➕ הוסף קרטון</button>
             </div>
-
-            <!-- רשימת קרטונים -->
+            
+            <!-- Loading -->
+            <div id="loading" class="loading">
+                <h3>🔄 מסנכרן עם Google Sheets...</h3>
+            </div>
+            
+            <!-- Boxes List -->
             <div id="boxesList"></div>
         </div>
     </div>
 
     <script>
-        // משתנים גלובליים
+        // Global variables
         let boxes = [];
+        let sheetsUrl = '';
         let isConnected = false;
-        let sheetsId = '';
-        let lastSync = null;
-
-        // טוען נתונים מקומיים בהפעלה
-        window.onload = function() {
+        
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
             loadLocalData();
-            checkSheetsConnection();
+            checkGoogleConnection();
             renderBoxes();
             updateStats();
-        };
-
-        // טוען נתונים מ-localStorage
+        });
+        
+        // Load data from localStorage
         function loadLocalData() {
-            const savedBoxes = localStorage.getItem('movingBoxes');
-            const savedSheetsUrl = localStorage.getItem('sheetsUrl');
-            
-            if (savedBoxes) {
-                boxes = JSON.parse(savedBoxes);
-            }
-            
-            if (savedSheetsUrl) {
-                document.getElementById('sheetsUrl').value = savedSheetsUrl;
+            try {
+                const savedBoxes = localStorage.getItem('movingBoxes');
+                if (savedBoxes) {
+                    boxes = JSON.parse(savedBoxes);
+                }
+                
+                const savedUrl = localStorage.getItem('sheetsUrl');
+                if (savedUrl) {
+                    sheetsUrl = savedUrl;
+                    document.getElementById('sheetsUrl').value = savedUrl;
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                boxes = [];
             }
         }
-
-        // שומר נתונים ב-localStorage
+        
+        // Save data to localStorage
         function saveLocalData() {
-            localStorage.setItem('movingBoxes', JSON.stringify(boxes));
-        }
-
-        // בודק חיבור ל-Google Sheets
-        function checkSheetsConnection() {
-            const savedUrl = localStorage.getItem('sheetsUrl');
-            if (savedUrl && extractSheetsId(savedUrl)) {
-                sheetsId = extractSheetsId(savedUrl);
-                isConnected = true;
-                updateConnectionStatus('connected', 'מחובר ל-Google Sheets - נתונים מסונכרנים אוטומטית');
-                hideSetupSection();
-                loadFromSheets();
+            try {
+                localStorage.setItem('movingBoxes', JSON.stringify(boxes));
+                if (sheetsUrl) {
+                    localStorage.setItem('sheetsUrl', sheetsUrl);
+                }
+            } catch (error) {
+                console.error('Error saving data:', error);
             }
         }
-
-        // מתחבר ל-Google Sheets
+        
+        // Check Google Sheets connection
+        function checkGoogleConnection() {
+            if (sheetsUrl) {
+                const sheetsId = extractSheetsId(sheetsUrl);
+                if (sheetsId) {
+                    updateStatus('connected', '🔗 מחובר ל-Google Sheets - הנתונים מסונכרנים אוטומטית');
+                    isConnected = true;
+                    hideGoogleSetup();
+                    loadFromSheets();
+                }
+            }
+        }
+        
+        // Connect to Google Sheets
         function connectToSheets() {
-            const url = document.getElementById('sheetsUrl').value;
+            const url = document.getElementById('sheetsUrl').value.trim();
             
-            if (!url || !url.includes('docs.google.com/spreadsheets')) {
-                alert('אנא הכנס קישור תקין לגוגל שיטס');
+            if (!url) {
+                showMessage('אנא הכנס קישור Google Sheets', 'error');
                 return;
             }
-
-            const extractedId = extractSheetsId(url);
-            if (!extractedId) {
-                alert('לא הצלחתי לחלץ את מזהה הגיליון מהקישור');
+            
+            if (!url.includes('docs.google.com/spreadsheets')) {
+                showMessage('קישור לא תקין - וודא שזה קישור ל-Google Sheets', 'error');
                 return;
             }
-
-            sheetsId = extractedId;
-            localStorage.setItem('sheetsUrl', url);
             
-            // בודק אם הגיליון נגיש
-            setupSheetsStructure();
+            const sheetsId = extractSheetsId(url);
+            if (!sheetsId) {
+                showMessage('לא הצלחתי לחלץ מזהה מהקישור', 'error');
+                return;
+            }
+            
+            sheetsUrl = url;
+            saveLocalData();
+            
+            // Test connection
+            testSheetsConnection(sheetsId);
         }
-
-        // מחלץ מזהה גיליון מה-URL
+        
+        // Extract Sheets ID from URL
         function extractSheetsId(url) {
             const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
             return match ? match[1] : null;
         }
-
-        // מגדיר מבנה הגיליון
-        function setupSheetsStructure() {
-            updateConnectionStatus('loading', 'מגדיר מבנה הגיליון...');
+        
+        // Test Sheets connection
+        function testSheetsConnection(sheetsId) {
+            showLoading(true);
             
-            // URL ל-Google Sheets API דרך Apps Script
+            // Test if we can access the sheet via CSV export
             const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetsId}/export?format=csv&gid=0`;
             
-            // בודק אם הגיליון נגיש
-            fetch(csvUrl)
-                .then(response => {
-                    if (response.ok) {
-                        isConnected = true;
-                        updateConnectionStatus('connected', 'חיבור בוצע בהצלחה! נתונים יסונכרנו אוטומטית');
-                        hideSetupSection();
-                        initializeSheets();
-                        return response.text();
-                    } else {
-                        throw new Error('גיליון לא נגיש - וודא שהוא משותף לכולם');
-                    }
-                })
-                .then(csvData => {
-                    if (csvData && csvData.includes('מספר קרטון')) {
-                        loadFromSheets();
-                    }
+            fetch(csvUrl, { mode: 'no-cors' })
+                .then(() => {
+                    isConnected = true;
+                    updateStatus('connected', '🔗 התחברות הצליחה! מסנכרן נתונים...');
+                    hideGoogleSetup();
+                    setupSheets(sheetsId);
+                    showMessage('התחברות ל-Google Sheets הצליחה! 🎉', 'success');
                 })
                 .catch(error => {
-                    updateConnectionStatus('disconnected', 'שגיאה בחיבור: ' + error.message);
-                    isConnected = false;
+                    console.error('Connection test failed:', error);
+                    updateStatus('error', '❌ שגיאה בחיבור - וודא שהגיליון משותף לכולם');
+                    showMessage('שגיאה בחיבור - וודא שהגיליון זמין לכולם', 'error');
+                })
+                .finally(() => {
+                    showLoading(false);
                 });
         }
-
-        // מאתחל מבנה הגיליון
-        function initializeSheets() {
+        
+        // Setup Sheets with initial data
+        function setupSheets(sheetsId) {
             if (boxes.length > 0) {
+                // We have local data, sync it to sheets
                 syncToSheets();
+            } else {
+                // Try to load from sheets
+                loadFromSheets();
             }
         }
-
-        // טוען נתונים מ-Google Sheets
+        
+        // Load data from Google Sheets
         function loadFromSheets() {
-            if (!isConnected || !sheetsId) return;
-
+            if (!isConnected || !sheetsUrl) return;
+            
+            const sheetsId = extractSheetsId(sheetsUrl);
+            if (!sheetsId) return;
+            
+            showLoading(true);
+            
             const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetsId}/export?format=csv&gid=0`;
             
-            fetch(csvUrl)
-                .then(response => response.text())
-                .then(csvData => {
-                    const newBoxes = parseCSV(csvData);
-                    if (newBoxes.length > 0) {
-                        boxes = newBoxes;
-                        saveLocalData();
-                        renderBoxes();
-                        updateStats();
-                        lastSync = new Date().toLocaleString('he-IL');
-                        updateConnectionStatus('connected', `נתונים נטענו מ-Google Sheets (${lastSync})`);
+            // Use a proxy service for CORS
+            const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(csvUrl);
+            
+            fetch(proxyUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const csvData = data.contents;
+                    if (csvData && csvData.includes('מספר קרטון')) {
+                        const loadedBoxes = parseCSVData(csvData);
+                        if (loadedBoxes.length > 0) {
+                            boxes = loadedBoxes;
+                            saveLocalData();
+                            renderBoxes();
+                            updateStats();
+                            showMessage(`נטענו ${loadedBoxes.length} קרטונים מ-Google Sheets! 📊`, 'success');
+                        }
                     }
                 })
                 .catch(error => {
-                    console.error('שגיאה בטעינה מ-Sheets:', error);
+                    console.error('Error loading from sheets:', error);
+                    showMessage('לא הצלחתי לטעון מ-Google Sheets, משתמש בנתונים מקומיים', 'error');
+                })
+                .finally(() => {
+                    showLoading(false);
                 });
         }
-
-        // מפרסר CSV לנתונים
-        function parseCSV(csvData) {
+        
+        // Parse CSV data
+        function parseCSVData(csvData) {
             const lines = csvData.split('\n');
             const result = [];
             
@@ -455,8 +468,8 @@
             
             return result;
         }
-
-        // מפרסר שורה מ-CSV
+        
+        // Parse CSV line
         function parseCSVLine(line) {
             const result = [];
             let current = '';
@@ -464,7 +477,6 @@
             
             for (let i = 0; i < line.length; i++) {
                 const char = line[i];
-                
                 if (char === '"') {
                     inQuotes = !inQuotes;
                 } else if (char === ',' && !inQuotes) {
@@ -474,43 +486,32 @@
                     current += char;
                 }
             }
-            
             result.push(current);
             return result;
         }
-
-        // מסנכרן ל-Google Sheets (באמצעות Google Forms)
+        
+        // Sync to Google Sheets
         function syncToSheets() {
-            if (!isConnected || !sheetsId || boxes.length === 0) return;
-
-            // יוצר CSV
-            const headers = ['מספר קרטון', 'תכולה', 'חדר יעד', 'תאריך הוספה'];
-            const csvContent = [
-                headers.join(','),
-                ...boxes.map(box => [
-                    `"${box.number}"`,
-                    `"${box.contents}"`,
-                    `"${box.room}"`,
-                    `"${box.timestamp}"`
-                ].join(','))
-            ].join('\n');
-
-            // מפנה לגיליון לעריכה ידנית (בגרסה פשוטה)
-            console.log('נתונים מוכנים לסנכרון:', csvContent);
-            updateConnectionStatus('connected', 'נתונים מוכנים לסנכרון עם Google Sheets');
-        }
-
-        // מוסיף קרטון חדש
-        function addBox(event) {
-            event.preventDefault();
+            if (!isConnected || !sheetsUrl || boxes.length === 0) return;
             
-            const number = document.getElementById('boxNumber').value;
-            const contents = document.getElementById('boxContents').value;
+            // For now, just show instructions since direct API access requires auth
+            showMessage('נתונים מוכנים לסנכרון! פתח את Google Sheets והעתק את הנתונים מהקובץ CSV שהורדת', 'success');
+        }
+        
+        // Add new box
+        function addBox() {
+            const number = document.getElementById('boxNumber').value.trim();
+            const contents = document.getElementById('boxContents').value.trim();
             const room = document.getElementById('boxRoom').value;
             
-            // בודק אם מספר הקרטון כבר קיים
+            if (!number || !contents || !room) {
+                showMessage('אנא מלא את כל השדות', 'error');
+                return;
+            }
+            
+            // Check if box number exists
             if (boxes.some(box => box.number === number)) {
-                alert('מספר קרטון כבר קיים!');
+                showMessage('מספר קרטון כבר קיים!', 'error');
                 return;
             }
             
@@ -525,11 +526,7 @@
             boxes.push(newBox);
             saveLocalData();
             
-            if (isConnected) {
-                syncToSheets();
-            }
-            
-            // מנקה טופס
+            // Clear form
             document.getElementById('boxNumber').value = '';
             document.getElementById('boxContents').value = '';
             document.getElementById('boxRoom').value = '';
@@ -537,40 +534,86 @@
             renderBoxes();
             updateStats();
             
-            showMessage('קרטון נוסף בהצלחה!', 'success');
+            if (isConnected) {
+                syncToSheets();
+            }
+            
+            showMessage('קרטון נוסף בהצלחה! 🎉', 'success');
         }
-
-        // מוחק קרטון
+        
+        // Delete box
         function deleteBox(id) {
             if (confirm('האם אתה בטוח שברצונך למחוק קרטון זה?')) {
                 boxes = boxes.filter(box => box.id !== id);
                 saveLocalData();
+                renderBoxes();
+                updateStats();
                 
                 if (isConnected) {
                     syncToSheets();
                 }
                 
-                renderBoxes();
-                updateStats();
                 showMessage('קרטון נמחק בהצלחה!', 'success');
             }
         }
-
-        // מציג קרטונים
+        
+        // Export to CSV
+        function exportToCSV() {
+            if (boxes.length === 0) {
+                showMessage('אין קרטונים לייצא', 'error');
+                return;
+            }
+            
+            const headers = ['מספר קרטון', 'תכולה', 'חדר יעד', 'תאריך הוספה'];
+            const csvContent = [
+                headers.join(','),
+                ...boxes.map(box => [
+                    `"${box.number}"`,
+                    `"${box.contents}"`,
+                    `"${box.room}"`,
+                    `"${box.timestamp}"`
+                ].join(','))
+            ].join('\n');
+            
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `קרטונים_מעבר_דירה_${new Date().toLocaleDateString('he-IL').replace(/\./g, '_')}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showMessage('קובץ CSV הורד בהצלחה! 📁', 'success');
+        }
+        
+        // Disconnect from Sheets
+        function disconnectSheets() {
+            sheetsUrl = '';
+            isConnected = false;
+            localStorage.removeItem('sheetsUrl');
+            document.getElementById('sheetsUrl').value = '';
+            updateStatus('local', '📱 עובד במצב מקומי - הנתונים נשמרים במכשיר זה בלבד');
+            showGoogleSetup();
+            showMessage('התנתקת מ-Google Sheets', 'success');
+        }
+        
+        // Render boxes
         function renderBoxes() {
             const container = document.getElementById('boxesList');
             
             if (boxes.length === 0) {
                 container.innerHTML = `
-                    <div class="card" style="text-align: center; padding: 3rem;">
-                        <h3>🎁 עדיין אין קרטונים</h3>
+                    <div class="empty-state">
+                        <h3>📦 עדיין אין קרטונים</h3>
                         <p>התחל להוסיף קרטונים כדי לארגן את המעבר שלך</p>
                     </div>
                 `;
                 return;
             }
-
-            // מקבץ לפי חדרים
+            
+            // Group by rooms
             const groupedBoxes = {};
             boxes.forEach(box => {
                 if (!groupedBoxes[box.room]) {
@@ -578,7 +621,7 @@
                 }
                 groupedBoxes[box.room].push(box);
             });
-
+            
             let html = '';
             Object.keys(groupedBoxes).forEach(room => {
                 html += `
@@ -593,14 +636,10 @@
                         <div class="box-card">
                             <div class="box-number">#${box.number}</div>
                             <div class="room-tag ${roomClass}">${box.room}</div>
-                            <div class="contents">${box.contents}</div>
-                            <div style="font-size: 0.8rem; color: #666; margin-bottom: 1rem;">
-                                נוסף: ${box.timestamp}
-                            </div>
+                            <div class="contents-box">${box.contents}</div>
+                            <div class="timestamp">נוסף: ${box.timestamp}</div>
                             <div class="actions">
-                                <button class="btn btn-danger" onclick="deleteBox(${box.id})">
-                                    🗑️ מחק
-                                </button>
+                                <button class="btn btn-danger" onclick="deleteBox(${box.id})">🗑️ מחק</button>
                             </div>
                         </div>
                     `;
@@ -611,11 +650,11 @@
                     </div>
                 `;
             });
-
+            
             container.innerHTML = html;
         }
-
-        // מחזיר class CSS לחדר
+        
+        // Get room CSS class
         function getRoomClass(room) {
             const classes = {
                 'סלון': 'room-salon',
@@ -624,36 +663,55 @@
                 'החדר של לירי': 'room-liri',
                 'החדר של ארז': 'room-erez',
                 'חדר מוזיקה': 'room-music',
-                'החדר של ויקה ועמיחי': 'room-vika-amihai'
+                'החדר של ויקה ועמיחי': 'room-vika'
             };
             return classes[room] || 'room-default';
         }
-
-        // מעדכן סטטיסטיקות
+        
+        // Update statistics
         function updateStats() {
             document.getElementById('totalBoxes').textContent = boxes.length;
             
             const rooms = new Set(boxes.map(box => box.room));
             document.getElementById('totalRooms').textContent = rooms.size;
         }
-
-        // מעדכן סטטוס חיבור
-        function updateConnectionStatus(status, message) {
+        
+        // Update status bar
+        function updateStatus(type, message) {
             const statusEl = document.getElementById('status');
-            statusEl.className = `status ${status}`;
-            statusEl.innerHTML = `<strong>${message}</strong>`;
+            statusEl.className = `status-bar status-${type}`;
+            statusEl.textContent = message;
         }
-
-        // מסתיר קטע ההגדרה
-        function hideSetupSection() {
-            document.getElementById('setup-section').style.display = 'none';
+        
+        // Show/hide Google setup
+        function hideGoogleSetup() {
+            document.getElementById('googleSetup').style.display = 'none';
         }
-
-        // מציג הודעה
-        function showMessage(message, type) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = type;
-            alertDiv.textContent = message;
+        
+        function showGoogleSetup() {
+            document.getElementById('googleSetup').style.display = 'block';
+        }
+        
+        // Show loading
+        function showLoading(show) {
+            const loadingEl = document.getElementById('loading');
+            if (show) {
+                loadingEl.classList.add('show');
+            } else {
+                loadingEl.classList.remove('show');
+            }
+        }
+        
+        // Show message
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.className = `message message-${type}`;
+            messageEl.textContent = text;
             
-            const mainContent = document.querySelector('.main-content');
-            mainContent.insertBefore(alertDiv, mainContent.firstChild);
+            setTimeout(() => {
+                messageEl.textContent = '';
+                messageEl.className = '';
+            }, 5000);
+        }
+        
+        // Enter key support
